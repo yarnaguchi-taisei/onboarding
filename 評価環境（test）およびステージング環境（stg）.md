@@ -52,3 +52,47 @@ PHPの重大な脆弱性対応に伴い、評価環境（test）およびステ�
 <body>
 </body>
 </html>
+```
+
+---
+
+## 🔗 3. サービス別・環境別 JS URL一覧
+
+各ALBのレスポンス本文に設定するメンテナンス画面用のJavaScriptファイル（`index.js`）のURL一覧です。
+
+> [!WARNING]
+> **test2 〜 test4 等の複数評価環境を設定する場合の注意点**
+> メンテナンス画面表示用の静的資材（JSファイル）は、`-test2` や `-test3` などの個別ドメイン配下には用意されていない場合があります。そのため、**`-test2`〜`-test4` のALBを設定する場合も、HTML内の `<script src="...">` に指定するドメインはすべて共通の `-test` (1系) のURLを指定してください。** これにより正常にメンテナンス画面がレンダリングされます。
+
+### 1. マイページ・会員系サービス
+
+| No | 対象システム (手順書名) | 対象ドメイン | ステージング環境 (stg) 用 JS URL | 評価環境 (test / test2 共通) 用 JS URL |
+| :---: | :--- | :--- | :--- | :--- |
+| **1** | **マイページ** (BSD3302) | `mypage` | `https://maintenance.mypage-staging.sso.biglobe.ne.jp/mypage/index.js` | `https://maintenance.mypage-test.sso.biglobe.ne.jp/mypage/index.js` |
+| **2** | **利用明細** (BSD3425) | `member` | `https://maintenance.member-staging.sso.biglobe.ne.jp/meisai/index.js` | `https://maintenance.member-test.sso.biglobe.ne.jp/meisai/index.js` |
+| **3** | **ガイダンス** (BSD3426) | `guidance` | `https://maintenance.guidance-staging.sso.biglobe.ne.jp/guidance/index.js` | `https://maintenance.guidance-test.sso.biglobe.ne.jp/guidance/index.js` |
+| **4** | **Gポイント** (BSD3383) | `gpoint` | `https://maintenance.gpoint-st.sso.biglobe.ne.jp/gpoint/index.js`<br>*(※存在しない場合は本番または `-test` を参照)* | `https://maintenance.gpoint-test.sso.biglobe.ne.jp/gpoint/index.js` |
+
+### 2. ISPサイト系サービス (BSD3308)
+
+ISPサイト系のメンテナンス用JSは、すべて `maintenance.order-staging`（評価環境は `maintenance.order-test`）配下に格納されています。
+
+| No | 対象システム (手順書名) | 対象ALB (ドメイン) | ステージング環境 (stg) 用 JS URL | 評価環境 (test / test2〜4 共通) 用 JS URL |
+| :---: | :--- | :--- | :--- | :--- |
+| **5** | **fixed** | `alb3` (`order`) | `https://maintenance.order-staging.sso.biglobe.ne.jp/fixed/index.js` | `https://maintenance.order-test.sso.biglobe.ne.jp/fixed/index.js` |
+| **6** | **family & setting** | `alb3` (`order`) | `https://maintenance.order-staging.sso.biglobe.ne.jp/setting-family/index.js` | `https://maintenance.order-test.sso.biglobe.ne.jp/setting-family/index.js` |
+| **7** | **perl** | `alb3` (`order`) | `https://maintenance.order-staging.sso.biglobe.ne.jp/perl/index.js` | `https://maintenance.order-test.sso.biglobe.ne.jp/perl/index.js` |
+| **8** | **hikari-plus** | `alb3` (`order`) | `https://maintenance.order-staging.sso.biglobe.ne.jp/hikari-plus/index.js` | `https://maintenance.order-test.sso.biglobe.ne.jp/hikari-plus/index.js` |
+| **9** | **scpf_mem** | `alb2` (`member1`) | `https://maintenance.order-staging.sso.biglobe.ne.jp/scpf_oss-scpf_mem-gpcgi/index.js` | `https://maintenance.order-test.sso.biglobe.ne.jp/scpf_oss-scpf_mem-gpcgi/index.js` |
+| **10** | **gpcgi & scpf_oss** | `alb4` (`signup`) | `https://maintenance.order-staging.sso.biglobe.ne.jp/scpf_oss-scpf_mem-gpcgi/index.js`<br>*(※停止用: `.../scpf_oss-stop/index.js`)* | `https://maintenance.order-test.sso.biglobe.ne.jp/scpf_oss-scpf_mem-gpcgi/index.js`<br>*(※停止用: `.../scpf_oss-stop/index.js`)* |
+
+---
+
+## 💡 ISPサイト（`order` / `member1` / `signup`）設定時の設計・動作補足
+
+1. **JS配信ドメインの集約ルール**
+   * 設定対象のWebサイトドメイン自体は `member1-*.sso.biglobe.ne.jp` や `signup-*.sso.biglobe.ne.jp` ですが、ALBに記述する読み込み先JSは **`maintenance.order-staging.sso.biglobe.ne.jp`** または **`maintenance.order-test.sso.biglobe.ne.jp`** を指定します。
+2. **`order` ドメイン（ALB3）の一括メンテナンス適用について**
+   * `fixed`、`family & setting`、`perl`、`hikari-plus` は物理的に同一のロードバランサー（`user-bsd3308-*-alb3`）で稼働しています。
+   * パス条件を `/*` で1本のルールとして統合設定する場合、上記No.5〜8のいずれか1つのJS（例: `setting-family/index.js` や `fixed/index.js`）を指定することで、`order` ドメイン配下すべてのアクセスに同一のメンテナンス画面を一斉表示させることができます。
+   * もし画面文言やデザインをパスグループごとに細かく分けたい場合のみ、従来の手順通りターゲットパスを `/fixed/*` や `/hikari-plus/*` に個別に分け、それぞれルールを定義してください。
