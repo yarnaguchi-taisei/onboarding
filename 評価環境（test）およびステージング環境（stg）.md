@@ -1,4 +1,4 @@
-# ALB緊急メンテナンス設定手順書 (PHP2Shell対応)
+# マイページ / ISPサイト ALB緊急メンテナンス設定手順書 (PHP2Shell時)
 
 PHPの重大な脆弱性対応に伴い、評価環境（test）およびステージング環境（stg）の各サービスにおいて、一時的にALB（Application Load Balancer）で固定レスポンスを返却し、アクセスを遮断するための設定手順です。
 
